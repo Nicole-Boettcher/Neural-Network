@@ -47,7 +47,7 @@ def process_layer(inputs, weights, hidden_true):
     else:
         h = 1 / (1 + np.exp(-z))
 
-    return h
+    return z, h
 
 def forward_propagation(x_train):
     print("Starting forward propagation")
@@ -60,12 +60,13 @@ def forward_propagation(x_train):
 
     # call process layer for each layer 
     # structure is 4 inputs, 1st hidden layer is 3 nodes, 2nd hidden layer is 3 nodes, output is 1 value with sigmoid
-    for i in range(len(x_train)):
-        output_layer_1 = process_layer(x_train[i], weights_layer_1, True)
-        output_layer_2 = process_layer(output_layer_1, weights_layer_2, True)
-        final_output = process_layer(output_layer_2, weights_output, False)
-        output_class = bayes_classifer(final_output)    #classify the probability
-        print(output_class)
+    
+    z_1, output_layer_1 = process_layer(x_train, weights_layer_1, True)
+    z_2, output_layer_2 = process_layer(output_layer_1, weights_layer_2, True)
+    z_3, final_output = process_layer(output_layer_2, weights_output, False)
+    output_class = bayes_classifer(final_output)    #classify the probability
+    print(output_class)
+    return z_1, output_layer_1, z_2, output_layer_2, z_3, final_output
 
 def bayes_classifer(output):
     if output <= 0.5:
@@ -73,6 +74,18 @@ def bayes_classifer(output):
     else:
         return 1
     
+def back_propagation(z_1, output_layer_1, z_2, output_layer_2, z_3, final_output, x_train):
+    print("Back Propagation")
+    dell_J_z_3 = -x_train + (1 / (1 + np.exp(-z_3)))    # equation (5)
+    grad_W_3_J = dell_J_z_3 * (np.insert(output_layer_2, 0, 1))   # equation (7) - check h is horiztonal
+
+    # need derivative of the activation function - relu derivative is 0 if input is <= 0 and 1 if input is > 0
+    
+    #dell_z_2_J = np.multiply(derivative_g(z_2),  )
+
+#def derivative_g(z):
+    
+
 def main():
     print("Assignment 4")
     #input_data = np.array((1372,5), float)
@@ -80,7 +93,8 @@ def main():
     x_train, t_train, x_val, t_val, x_test, t_test = pre_processing()
     # need weights for each layer - 3 layers - [[3,5],[3,4],[1,4]]
 
-    forward_propagation(x_train)
+    z_1, output_layer_1, z_2, output_layer_2, z_3, final_output = forward_propagation(x_train[0])
+    back_propagation(z_1, output_layer_1, z_2, output_layer_2, z_3, final_output, x_train[0])
 
 main()
 
