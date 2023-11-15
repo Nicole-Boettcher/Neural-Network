@@ -50,8 +50,8 @@ def process_layer(inputs, weights, hidden_true):
 
     return z, h
 
-def forward_propagation(x_train, weights_layer_1, weights_layer_2, weights_output):
-    print("Starting forward propagation")
+def forward_propagation_test(x_train, weights_layer_1, weights_layer_2, weights_output):
+    #print("Starting forward propagation")
 
     #init weights to all ones and segment by layers 
 
@@ -62,7 +62,22 @@ def forward_propagation(x_train, weights_layer_1, weights_layer_2, weights_outpu
     z_2, output_layer_2 = process_layer(output_layer_1, weights_layer_2, True)
     z_3, final_output = process_layer(output_layer_2, weights_output, False)
     output_class = bayes_classifer(final_output)    #classify the probability
-    print(output_class)
+    return output_class
+
+
+def forward_propagation(x_train, weights_layer_1, weights_layer_2, weights_output):
+    #print("Starting forward propagation")
+
+    #init weights to all ones and segment by layers 
+
+    # call process layer for each layer 
+    # structure is 4 inputs, 1st hidden layer is 3 nodes, 2nd hidden layer is 3 nodes, output is 1 value with sigmoid
+    
+    z_1, output_layer_1 = process_layer(x_train, weights_layer_1, True)
+    z_2, output_layer_2 = process_layer(output_layer_1, weights_layer_2, True)
+    z_3, final_output = process_layer(output_layer_2, weights_output, False)
+    output_class = bayes_classifer(final_output)    #classify the probability
+    print("output class = ", output_class)
     return z_1, output_layer_1, z_2, output_layer_2, z_3, final_output
 
 def bayes_classifer(output):
@@ -71,7 +86,7 @@ def bayes_classifer(output):
     else:
         return 1
     
-def back_propagation(x_train, t_train, weights_layer_1, z_1, output_layer_1, weights_layer_2, z_2, output_layer_2, weights_output, z_3, final_output):
+def back_propagation(x_train, t_train, weights_layer_1, z_1, output_layer_1, weights_layer_2, z_2, output_layer_2, weights_output, z_3):
     #print("Back Propagation")
     # Layer 3 calculations
     dell_J_z_3 = np.array(-int(t_train) + (1 / (1 + np.exp(-z_3))))    # equation (5) - ONE VALUE
@@ -119,7 +134,7 @@ def main():
 
     for sample_num in range(len(x_train)):
         z_1, output_layer_1, z_2, output_layer_2, z_3, final_output = forward_propagation(x_train[sample_num], weights_layer_1, weights_layer_2, weights_output)
-        gradient_weights = back_propagation(x_train[sample_num], t_train[sample_num], weights_layer_1, z_1, output_layer_1, weights_layer_2, z_2, output_layer_2, weights_output, z_3, final_output)
+        gradient_weights = back_propagation(x_train[sample_num], t_train[sample_num], weights_layer_1, z_1, output_layer_1, weights_layer_2, z_2, output_layer_2, weights_output, z_3)
 
         # update weights using gradient 
         weights_layer_1 = weights_layer_1 - alpha*(gradient_weights[0])
@@ -130,6 +145,17 @@ def main():
     print(weights_layer_1)
     print(weights_layer_2)
     print(weights_output)
+
+    correct_pred = 0
+    for test_sample_num in range(len(x_test)):
+        pred_class = forward_propagation_test(x_test[test_sample_num], weights_layer_1, weights_layer_2, weights_output)
+        print("\ntarget = ", t_test[test_sample_num], " predicited = ", pred_class)
+        if pred_class == int(t_test[test_sample_num]): 
+            print("correct")
+            correct_pred = correct_pred + 1
+
+    print("accuracy = ", correct_pred / len(t_test))
+
 
 main()
 
