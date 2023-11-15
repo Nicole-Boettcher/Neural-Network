@@ -7,7 +7,7 @@ sc = StandardScaler()
 random_seed = 7262 
 num_nodes_layer_1 = 3
 num_nodes_layer_2 = 3
-alpha = 0.005
+alpha = 0.05
 
 def pre_processing():
     feature_data = []
@@ -29,9 +29,24 @@ def pre_processing():
 
     return np.array(sc.fit_transform(X_train)), np.array(t_train), np.array(sc.transform(X_val)), np.array(t_val), np.array(sc.transform(X_test)), np.array(t_test)
 
+def init_weights():
+
+    lower_bound_l1 = -1/math.sqrt(4)
+    lower_bound_l2 = -1/math.sqrt(num_nodes_layer_1)
+    lower_bound_l3 = -1/math.sqrt(num_nodes_layer_2)
+    
+    weights_layer_1 = np.random.uniform(lower_bound_l1, -1*lower_bound_l1, size=(num_nodes_layer_1, 5))
+    weights_layer_2 = np.random.uniform(lower_bound_l2, -1*lower_bound_l2, size=(num_nodes_layer_2, num_nodes_layer_1+1))
+    weights_output = np.random.uniform(lower_bound_l3, -1*lower_bound_l3, size=(1, num_nodes_layer_2+1))
+
+    weights_layer_1[:, 0] = 0
+    weights_layer_2[:, 0] = 0
+    weights_output[:, 0] = 0
+    
+    return weights_layer_1, weights_layer_2, weights_output
+
 def relu(x):
     return np.maximum(0, x)
-
 
 def process_layer(inputs, weights, hidden_true):
     #print("Processing hidden layer")
@@ -92,9 +107,10 @@ def back_propagation(x_train, t_train, weights_layer_1, z_1, output_layer_1, wei
     dell_J_z_3 = np.array(-int(t_train) + (1 / (1 + np.exp(-z_3))))    # equation (5) - ONE VALUE
     grad_W_3_J = dell_J_z_3 * (np.insert(output_layer_2, 0, 1))   # equation (7) - check h is horiztonal - tiz    
 
-    W_3_trans = np.array([[weights_output[0][1]],[weights_output[0][2]],[weights_output[0][3]]])  #omit the first row -- WILL CHANGE WITH DIFF NUMBER OF NODE
+    W_3_trans = np.array(weights_output[:, 1:]).transpose()
+    #W_3_trans = np.array([[weights_output[0][1]],[weights_output[0][2]],[weights_output[0][3]]])  #omit the first row -- WILL CHANGE WITH DIFF NUMBER OF NODE
     
-    dell_z_2_J = np.multiply(derivative_relu(z_2).reshape(3,1), dell_J_z_3*W_3_trans)  # (4) - WILL CHANGE WITH DIFF NUMBER OF ROWS
+    dell_z_2_J = np.multiply(derivative_relu(z_2).reshape(num_nodes_layer_2,1), dell_J_z_3*W_3_trans)  # (4) - WILL CHANGE WITH DIFF NUMBER OF ROWS
     # above this is correct 
     #print("Grad of layer 3 params (7) = ", grad_W_3_J)
     #print("equation 4 = ", dell_z_2_J)
@@ -103,9 +119,8 @@ def back_propagation(x_train, t_train, weights_layer_1, z_1, output_layer_1, wei
 
     grad_W_2_J = dell_z_2_J * (np.insert(output_layer_1, 0, 1)) # equation (6) -- SHOULD THIS BE DOT PRODUCT?
 
-    W_2_chop = np.array(weights_layer_2[:, 1:])
-    W_2_trans = W_2_chop.transpose()  #omit the first row -- WILL CHANGE WITH DIFF NUMBER OF NODE
-    dell_z_1_J = np.multiply(derivative_relu(z_1).reshape(3,1), W_2_trans.dot(dell_z_2_J)) # equation (3)
+    W_2_trans = np.array(weights_layer_2[:, 1:]).transpose()  #omit the first row -- WILL CHANGE WITH DIFF NUMBER OF NODE
+    dell_z_1_J = np.multiply(derivative_relu(z_1).reshape(num_nodes_layer_1,1), W_2_trans.dot(dell_z_2_J)) # equation (3)
     #print("Grad of layer 2 params (6) = ", grad_W_2_J)
     #print("equation 3 = ", dell_z_1_J)
 
@@ -127,10 +142,7 @@ def main():
 
     x_train, t_train, x_val, t_val, x_test, t_test = pre_processing()
     # need weights for each layer - 3 layers - [[3,5],[3,4],[1,4]]
-
-    weights_layer_1 = np.ones((num_nodes_layer_1, 5))
-    weights_layer_2 = np.ones((num_nodes_layer_2, num_nodes_layer_1+1))
-    weights_output = np.ones((1, num_nodes_layer_2+1))
+    weights_layer_1, weights_layer_2, weights_output = init_weights()
 
     for sample_num in range(len(x_train)):
         z_1, output_layer_1, z_2, output_layer_2, z_3, final_output = forward_propagation(x_train[sample_num], weights_layer_1, weights_layer_2, weights_output)
@@ -142,18 +154,17 @@ def main():
         weights_output = weights_output - alpha*(gradient_weights[2])
         print("Weights updated: ", sample_num)
 
-    print(weights_layer_1)
-    print(weights_layer_2)
-    print(weights_output)
-
     correct_pred = 0
     for test_sample_num in range(len(x_test)):
         pred_class = forward_propagation_test(x_test[test_sample_num], weights_layer_1, weights_layer_2, weights_output)
-        print("\ntarget = ", t_test[test_sample_num], " predicited = ", pred_class)
+        #print("\ntarget = ", t_test[test_sample_num], " predicited = ", pred_class)
         if pred_class == int(t_test[test_sample_num]): 
-            print("correct")
+            #print("correct")
             correct_pred = correct_pred + 1
 
+    print(weights_layer_1)
+    print(weights_layer_2)
+    print(weights_output)
     print("accuracy = ", correct_pred / len(t_test))
 
 
