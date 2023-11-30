@@ -8,8 +8,8 @@ from scipy.special import expit
 sc = StandardScaler()
 
 random_seed = 7262 
-num_nodes_layer_1 = 2
-num_nodes_layer_2 = 2
+num_nodes_layer_1 = 4
+num_nodes_layer_2 = 4
 num_epoch = 250
 
 def pre_processing():
@@ -188,20 +188,6 @@ def derivative_relu(z):
     conditional = z < 0
     return np.where(conditional, 0, 1)  # if each element in z is less than 0, than the slope is 0 and if z > 0 then the slope is 1
 
-# def calculate_loss(x_set, t_set, weights_layer_1, weights_layer_2, weights_output):
-#     # need to run all validation samples throught the net and get average cross entro loss
-#     cross_entro_loss = 0
-#     accuracy = 0
-#     for index in range(len(x_set)):
-#         pre_sigmoid, h_3, output_class = forward_propagation_test(x_set[index], weights_layer_1, weights_layer_2, weights_output)
-#         cross_entro_loss += float(t_set[index])*np.logaddexp(0,-float(pre_sigmoid[0])) + (1-float(t_set[index]))*np.logaddexp(0,float(pre_sigmoid[0]))
-
-#         if output_class == int(t_set[index]): 
-#             accuracy = accuracy + 1
-
-#     print("Accuracy = ", accuracy / len(t_set), "       cross_entro_loss = ", cross_entro_loss / len(x_set))
-#     return cross_entro_loss / len(x_set)
-
 
 # VECTORIZED loss function
 def calculate_loss(x_set, t_set, weights_layer_1, weights_layer_2, weights_output):
@@ -215,18 +201,22 @@ def calculate_loss(x_set, t_set, weights_layer_1, weights_layer_2, weights_outpu
     #print(cross_entro_loss)
     return cross_entro_loss # Negative sign to convert to average and handle minimization
 
+def calculate_misclassification_error(sample_set, training_set, w_1, w_2, w_3):
+    correct_pred = 0
+    for sample_num in range(len(sample_set)):
+        _, _, _, _, _, _, pred_class = forward_propagation(sample_set[sample_num], w_1, w_2, w_3)
+        #print("\ntarget = ", t_test[test_sample_num], " predicited = ", pred_class)
+        if pred_class == int(training_set[sample_num]): 
+            #print("correct")
+            correct_pred = correct_pred + 1
+
+    print("accuracy = ", correct_pred / len(training_set))
 
 def main():
     print("Assignment 4")
     #input_data = np.array((1372,5), float)
 
     x_train, t_train, x_test, t_test, x_val, t_val = pre_processing()
-    print(x_train.shape)
-    print(t_train.shape)
-    print(x_test.shape)
-    print(t_test.shape)
-    print(x_val.shape)
-    print(t_val.shape)
     # need weights for each layer - 3 layers - [[3,5],[3,4],[1,4]]
     indices_train = np.arange(len(x_train))
     indices_val = np.arange(len(x_val))
@@ -259,30 +249,23 @@ def main():
                 weights_output = weights_output - alpha*(gradient_weights[2])
 
                 # calculate training and validation error
-                #print("Weights updated: ", sample_num)
 
-            #print("Training: ")
             training_loss = calculate_loss(x_train, t_train, weights_layer_1, weights_layer_2, weights_output)
-            #print("Validation: ")
             val_loss = calculate_loss(x_val, t_val, weights_layer_1, weights_layer_2, weights_output)
-            #test_loss = calculate_loss(x_test, t_test, weights_layer_1, weights_layer_2, weights_output)
-            #print("Val Loss = ", val_loss)
-            #print("Training loss = ", training_loss)
+ 
             validation_cross_entro_loss.append(val_loss)
             training_cross_entro_loss.append(training_loss)
-            #test.append(test_loss)
 
 
         graph += 1
         title = "Weight init: " , weights
-        plt.subplot(3, 1, graph)
+        plt.subplot(1, 1, graph)
         plt.title(title)
         plt.xlabel("Epoch")
         plt.ylabel("Cross entropy loss")
         plt.ylim(0,0.2)
         plt.plot(training_cross_entro_loss, 'r:x', label="training")
         plt.plot(validation_cross_entro_loss, 'b:x', label="validation")
-        #plt.plot(test, 'g:x', label="test")
         plt.legend()
         print(weights)
         print("Training loss = ", training_cross_entro_loss[-1])
@@ -295,34 +278,17 @@ def main():
         
     final = [round(element, 5) for element in final_val_train_loss]
     print(final)
-    plt.suptitle("Training and Validation cross entropy loss per Epoch - (2,2)")
+    plt.suptitle("Training and Validation cross entropy loss per Epoch - (4,4)")
     plt.show()
+    
+    # Calculate misclassification error on test, training and validation set
 
-    # correct_pred = 0
-    # for test_sample_num in range(len(x_test)):
-    #     z_3, pred_class = forward_propagation_test(x_test[test_sample_num], weights_layer_1, weights_layer_2, weights_output)
-    #     #print("\ntarget = ", t_test[test_sample_num], " predicited = ", pred_class)
-    #     if pred_class == int(t_test[test_sample_num]): 
-    #         #print("correct")
-    #         correct_pred = correct_pred + 1
-
-    # print(weights_layer_1)
-    # print(weights_layer_2)
-    # print(weights_output)
-    # print("accuracy = ", correct_pred / len(t_test))
-
-
-    # correct_pred_train = 0
-    # for train_sample_num in range(len(x_train)):
-    #     pre_sigmoid, z_3, pred_class = forward_propagation_test(x_train[train_sample_num], weights_layer_1, weights_layer_2, weights_output)
-    #     print("\ntarget = ", t_train[train_sample_num], " predicited = ", pred_class)
-    #     if pred_class == int(t_train[train_sample_num]): 
-    #         print("correct")
-    #         correct_pred_train = correct_pred_train + 1
-
-    # print("TRAINING accuracy = ", correct_pred_train / len(t_train))
-
-
+    print("Misclassification error on test set")
+    calculate_misclassification_error(x_test, t_test, weights_layer_1, weights_layer_2, weights_output)
+    print("Misclassification error on training set")
+    calculate_misclassification_error(x_train, t_train, weights_layer_1, weights_layer_2, weights_output)
+    print("Misclassification error on validation set")
+    calculate_misclassification_error(x_val, t_val, weights_layer_1, weights_layer_2, weights_output)
 
 main()
 
